@@ -16,6 +16,9 @@ local seed_at = nil
 local notes_held = 0
 local clock_coro = nil
 local midi_dev = nil
+local in_level = 0
+local in_polls = {}
+local screen_metro = nil
 
 local pages = {
   {
@@ -30,12 +33,15 @@ local pages = {
     ids = {"time_atten", "size_atten", "shape_atten", "pitch_atten"},
     labels = {"TIME", "SIZE", "SHAP", "PTCH"},
   },
-  {
-    name = "mix",
-    bipolar = false,
-    ids = {"feedback", "dry_wet", "beads_reverb", "level"},
-    labels = {"FB", "WET", "RVB", "LVL"},
-  },
+}
+
+local mix_rows = {
+  {name = "in", id = "input_level"},
+  {name = "monitor", id = "monitor_level"},
+  {name = "out", id = "level"},
+  {name = "feedback", id = "feedback"},
+  {name = "dry/wet", id = "dry_wet"},
+  {name = "reverb", id = "beads_reverb"},
 }
 
 local tone_rows = {
@@ -222,7 +228,7 @@ local function build_params()
   params:add{
     type = "control",
     id = "level",
-    name = "level",
+    name = "output",
     controlspec = controlspec.new(0, 1, "lin", 0, 0.8, "", 0.01),
     action = function(v) engine.amp(v) end,
   }
@@ -293,6 +299,10 @@ local function on_midi(data)
       params:set("pitch_cv_on", 1)
       if mode == 3 then engine.seed(seed_down and 1 or 0) end
     end
+  elseif msg.type == "stop" or (msg.type == "cc" and (msg.cc == 120 or msg.cc == 123)) then
+    notes_held = 0
+    params:set("pitch_cv_on", 1)
+    if mode == 3 then engine.seed(seed_down and 1 or 0) end
   end
 end
 
@@ -316,6 +326,18 @@ local function header(title)
   screen.level(6)
   screen.move(128, 8)
   screen.text_right(quality .. " " .. state .. extras)
+
+  local shown = math.sqrt(util.clamp(in_level, 0, 1))
+  local width = math.floor(shown * 36)
+  screen.level(2)
+  screen.rect(0, 11, 36, 1)
+  screen.fill()
+  if width > 0 then
+    screen.level(shown > 0.9 and 15 or 8)
+    screen.rect(0, 11, width, 1)
+    screen.fill()
+  end
+  in_level = in_level * 0.8
 end
 
 local function shown(id, label, on)
@@ -368,9 +390,9 @@ local function draw_bars(spec)
   end
 end
 
-local function draw_tone()
-  for i, row in ipairs(tone_rows) do
-    local y = 16 + i * 8
+local function draw_rows(rows)
+  for i, row in ipairs(rows) do
+    local y = 10 + i * 8
     screen.level(i == selected and 15 or 5)
     screen.move(2, y)
     screen.text(row.name)
@@ -380,16 +402,39 @@ local function draw_tone()
 end
 
 local function draw_presets()
+  local loaded = params:get("beads_preset")
   local window = 6
   local start = 1
   if selected > window then start = selected - window + 1 end
   for i = start, math.min(#presets, start + window - 1) do
-    local y = 16 + (i - start + 1) * 8
+    local y = 10 + (i - start + 1) * 8
     local on = i == selected
-    screen.level(on and 15 or 5)
+    local mark = "  "
+    if on then
+      mark = "> "
+    elseif i == loaded then
+      mark = "* "
+    end
+    screen.level(on and 15 or (i == loaded and 8 or 5))
     screen.move(2, y)
-    screen.text((on and "> " or "  ") .. presets[i].name)
+    screen.text(mark .. presets[i].name)
   end
+end
+
+local function start_meters()
+  for _, name in ipairs({"amp_in_l", "amp_in_r"}) do
+    local reader = poll.set(name)
+    reader.time = 0.05
+    reader.callback = function(value)
+      if value > in_level then in_level = value end
+    end
+    reader:start()
+    in_polls[#in_polls + 1] = reader
+  end
+  screen_metro = metro.init()
+  screen_metro.time = 1 / 15
+  screen_metro.event = redraw
+  screen_metro:start()
 end
 
 function init()
@@ -397,11 +442,15 @@ function init()
   midi_dev = midi.connect(1)
   midi_dev.event = on_midi
   params:bang()
+  start_meters()
   redraw()
 end
 
 function cleanup()
   if clock_coro then clock.cancel(clock_coro) end
+  for _, reader in ipairs(in_polls) do reader:stop() end
+  in_polls = {}
+  if screen_metro then screen_metro:stop() end
 end
 
 function key(n, z)
@@ -427,23 +476,31 @@ end
 
 function enc(n, d)
   if n == 1 then
-    page = util.clamp(page + d, 1, 5)
+    page = page + d
+    if page < 1 then page = 5 end
+    if page > 5 then page = 1 end
     if page == 5 then
       selected = params:get("beads_preset")
     else
       selected = 1
     end
   elseif page == 5 then
-    if n == 2 or n == 3 then
-      local index = util.clamp(params:get("beads_preset") + d, 1, #presets)
-      params:set("beads_preset", index)
-      selected = index
+    if n == 2 then
+      selected = util.clamp(selected + d, 1, #presets)
+    elseif n == 3 then
+      params:set("beads_preset", selected)
     end
   elseif page == 4 then
     if n == 2 then
       selected = util.clamp(selected + d, 1, #tone_rows)
     elseif n == 3 then
       params:delta(tone_rows[selected].id, d)
+    end
+  elseif page == 3 then
+    if n == 2 then
+      selected = util.clamp(selected + d, 1, #mix_rows)
+    elseif n == 3 then
+      params:delta(mix_rows[selected].id, d)
     end
   else
     local ids = pages[page].ids
@@ -465,7 +522,10 @@ function redraw()
     draw_presets()
   elseif page == 4 then
     header("tone")
-    draw_tone()
+    draw_rows(tone_rows)
+  elseif page == 3 then
+    header("mix")
+    draw_rows(mix_rows)
   else
     header(pages[page].name)
     draw_bars(pages[page])

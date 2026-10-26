@@ -34,9 +34,9 @@ With no headers, `./build.sh` only builds the offline render test (`build/beads_
 
 | Control | Does |
 | --- | --- |
-| E1 | Page: grain, spread, mix, tone, preset |
+| E1 | Page: grain, spread, mix, tone, preset. Wraps around |
 | E2 | Pick a control on the page |
-| E3 | Change it |
+| E3 | Change it. On the preset page, load the highlighted one |
 | K2 | Freeze the buffer |
 | K3 | Seed. A tap arms the clock (grains wait for taps). Hold K3 to go back to free running |
 
@@ -44,11 +44,13 @@ Grain is density, time, size, shape, and pitch. Time is a position in the buffer
 
 Spread is the attenurandomizer on each of those, except density. At noon nothing extra happens. Away from noon, with no CV patched, the grain parameter is randomized. Positive and negative feel different: one is a steady wander, the other is occasional jumps. The CV rows in the params menu are the patched-jack behavior.
 
-Mix is feedback, dry/wet, reverb, and output level. In wavetable mode, feedback picks the waveform bank.
+Mix is the norns input, the monitor (input sent straight to the output), Beads' own output, then feedback, dry/wet, and reverb. In wavetable mode, feedback picks the waveform bank.
 
 Tone is the quality (dirty tape, clean tape, the Clouds-style setting, 16-bit), stereo or mono, audio input or wavetable, the norns clock as a seed clock, and whether the right output is audio or a gate.
 
-Preset recalls settings described in the Beads manual. Feedback is the manual's test patch (dry/wet open, size at noon, density at 9 o'clock, shape at 2, time fully down, pitch up a semitone). Delay, slice, and comb are the delay section. Reverse is a backwards grain. Tap is one grain per seed press. Wavetable is the internal oscillator. Melody turns the pitch spread fully up so pitch CV tracks a keyboard.
+Preset recalls settings described in the Beads manual. E2 moves through the list and E3 loads the highlighted line. A star marks the one that is loaded. Feedback is the manual's test patch (dry/wet open, size at noon, density at 9 o'clock, shape at 2, time fully down, pitch up a semitone). Delay, slice, and comb are the delay section. Reverse is a backwards grain. Tap is one grain per seed press. Wavetable is the internal oscillator. Melody turns the pitch spread fully up so pitch CV tracks a keyboard.
+
+A line under the page name is the input level, so you can see whether sound is reaching the norns.
 
 MIDI defaults to pitch. Notes transpose around middle C. `pitch + seed` also holds the seed button for as long as a note is down.
 
