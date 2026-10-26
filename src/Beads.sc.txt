@@ -1,0 +1,36 @@
+// UGen class for the Beads plugin.
+// Kept as .sc.txt inside the script folder because norns compiles every .sc
+// file under ~/dust. Install this as:
+//   ~/.local/share/SuperCollider/Extensions/Beads/Beads.sc
+
+Beads : MultiOutUGen {
+	*ar {
+		arg inL, inR,
+			density = 0.22, densityCv = 0,
+			time = 0.02, timeAtten = 0, timeCv = 0, timeHasCv = 0,
+			size = 0.45, sizeAtten = 0, sizeCv = 0, sizeHasCv = 0,
+			shape = 0.55, shapeAtten = 0, shapeCv = 0, shapeHasCv = 0,
+			pitch = 0, pitchAtten = 0, pitchCv = 0, pitchHasCv = 0,
+			feedback = 0.2, dryWet = 1, reverb = 0.25,
+			freeze = 0, seed = 0, seedLock = 1,
+			gate = 0, clockIn = 0,
+			media = 3, mono = 0, outputGate = 0, synth = 0;
+		^this.multiNewList([
+			\audio, inL, inR,
+			density, densityCv,
+			time, timeAtten, timeCv, timeHasCv,
+			size, sizeAtten, sizeCv, sizeHasCv,
+			shape, shapeAtten, shapeCv, shapeHasCv,
+			pitch, pitchAtten, pitchCv, pitchHasCv,
+			feedback, dryWet, reverb,
+			freeze, seed, seedLock,
+			gate, clockIn,
+			media, mono, outputGate, synth
+		]);
+	}
+
+	init { arg ... theInputs;
+		inputs = theInputs;
+		^this.initOutputs(2, rate);
+	}
+}
