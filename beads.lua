@@ -41,6 +41,117 @@ local tone_rows = {
   {name = "right", id = "output_gate"},
 }
 
+-- Knob positions from the Beads manual, on a pot that runs from 7 o'clock
+-- (0) to 5 o'clock (1). 12 o'clock is 0.5. Pitch is already in semitones:
+-- 11 o'clock and 1 o'clock land on the first detent, one semitone.
+local presets = {
+  {
+    name = "init",
+    density = 0.22, time = 0.02, size = 0.45, shape = 0.55, pitch = 0,
+    time_atten = 0, size_atten = 0, shape_atten = 0, pitch_atten = 0,
+    feedback = 0.2, dry_wet = 1, beads_reverb = 0.25,
+    media = 4, mono = 1, synth = 1, clock_in = 1, seed_lock = 2, freeze = 1, output_gate = 1,
+    time_cv_on = 1, size_cv_on = 1, shape_cv_on = 1, pitch_cv_on = 1,
+  },
+  {
+    -- "Try these settings": dry/wet fully CW, size at noon, density at 9,
+    -- shape at 2, time fully CCW, pitch at 1, spreads at noon.
+    name = "feedback",
+    density = 0.2, time = 0, size = 0.5, shape = 0.7, pitch = 1,
+    time_atten = 0, size_atten = 0, shape_atten = 0, pitch_atten = 0,
+    feedback = 0.75, dry_wet = 1, beads_reverb = 0.15,
+    media = 4, mono = 1, synth = 1, clock_in = 1, seed_lock = 2, freeze = 1, output_gate = 1,
+    time_cv_on = 1, size_cv_on = 1, shape_cv_on = 1, pitch_cv_on = 1,
+  },
+  {
+    -- Size fully CW turns Beads into a delay. Shape fully CCW is the plain
+    -- repeat. Density at 9 is a shorter delay on the binary side of noon.
+    name = "delay",
+    density = 0.2, time = 0.5, size = 1, shape = 0, pitch = 0,
+    time_atten = 0, size_atten = 0, shape_atten = 0, pitch_atten = 0,
+    feedback = 0.4, dry_wet = 1, beads_reverb = 0.2,
+    media = 4, mono = 1, synth = 1, clock_in = 1, seed_lock = 2, freeze = 1, output_gate = 1,
+    time_cv_on = 1, size_cv_on = 1, shape_cv_on = 1, pitch_cv_on = 1,
+  },
+  {
+    -- The same delay, frozen, so time picks a slice of the buffer.
+    name = "slice",
+    density = 0.2, time = 0.35, size = 1, shape = 0, pitch = 0,
+    time_atten = 0, size_atten = 0, shape_atten = 0, pitch_atten = 0,
+    feedback = 0.25, dry_wet = 1, beads_reverb = 0.15,
+    media = 4, mono = 1, synth = 1, clock_in = 1, seed_lock = 2, freeze = 2, output_gate = 1,
+    time_cv_on = 1, size_cv_on = 1, shape_cv_on = 1, pitch_cv_on = 1,
+  },
+  {
+    -- Size fully CW and density near fully CCW: the short, audio-rate delay
+    -- the manual describes as a flanger or comb.
+    name = "comb",
+    density = 0.05, time = 0.25, size = 1, shape = 0, pitch = 0,
+    time_atten = 0, size_atten = 0, shape_atten = 0, pitch_atten = 0,
+    feedback = 0.55, dry_wet = 0.65, beads_reverb = 0.1,
+    media = 4, mono = 1, synth = 1, clock_in = 1, seed_lock = 2, freeze = 1, output_gate = 1,
+    time_cv_on = 1, size_cv_on = 1, shape_cv_on = 1, pitch_cv_on = 1,
+  },
+  {
+    -- Below the short-grain point (about 10:30), size plays the grain backwards.
+    name = "reverse",
+    density = 0.25, time = 0.08, size = 0.12, shape = 0.65, pitch = 0,
+    time_atten = 0, size_atten = 0, shape_atten = 0, pitch_atten = 0,
+    feedback = 0.15, dry_wet = 1, beads_reverb = 0.3,
+    media = 4, mono = 1, synth = 1, clock_in = 1, seed_lock = 2, freeze = 1, output_gate = 1,
+    time_cv_on = 1, size_cv_on = 1, shape_cv_on = 1, pitch_cv_on = 1,
+  },
+  {
+    -- Seed unlatched and density at noon: one grain each time the seed is tapped.
+    name = "tap",
+    density = 0.5, time = 0.1, size = 0.45, shape = 0.4, pitch = 0,
+    time_atten = 0, size_atten = 0, shape_atten = 0, pitch_atten = 0,
+    feedback = 0.1, dry_wet = 1, beads_reverb = 0.2,
+    media = 4, mono = 1, synth = 1, clock_in = 1, seed_lock = 1, freeze = 1, output_gate = 1,
+    time_cv_on = 1, size_cv_on = 1, shape_cv_on = 1, pitch_cv_on = 1,
+  },
+  {
+    -- Nothing patched in: the internal wavetable. Feedback picks the bank,
+    -- dry/wet mixes the oscillator with the grains.
+    name = "wavetable",
+    density = 0.3, time = 0.15, size = 0.45, shape = 0.6, pitch = 0,
+    time_atten = 0, size_atten = 0, shape_atten = 0, pitch_atten = 0.4,
+    feedback = 0.35, dry_wet = 0.55, beads_reverb = 0.3,
+    media = 4, mono = 1, synth = 2, clock_in = 1, seed_lock = 2, freeze = 1, output_gate = 1,
+    time_cv_on = 1, size_cv_on = 1, shape_cv_on = 1, pitch_cv_on = 1,
+  },
+  {
+    -- Pitch attenurandomizer fully CW, so a keyboard or sequencer on pitch CV
+    -- tracks at 1 volt per octave.
+    name = "melody",
+    density = 0.35, time = 0.05, size = 0.4, shape = 0.55, pitch = 0,
+    time_atten = 0, size_atten = 0, shape_atten = 0, pitch_atten = 1,
+    feedback = 0.15, dry_wet = 1, beads_reverb = 0.25,
+    media = 4, mono = 1, synth = 1, clock_in = 1, seed_lock = 2, freeze = 1, output_gate = 1,
+    time_cv_on = 1, size_cv_on = 1, shape_cv_on = 1, pitch_cv_on = 2,
+  },
+}
+
+local preset_keys = {
+  "density", "time", "size", "shape", "pitch",
+  "time_atten", "size_atten", "shape_atten", "pitch_atten",
+  "feedback", "dry_wet", "beads_reverb",
+  "media", "mono", "synth", "clock_in", "seed_lock", "freeze", "output_gate",
+  "time_cv_on", "size_cv_on", "shape_cv_on", "pitch_cv_on",
+}
+
+local applying_preset = false
+
+local function apply_preset(index)
+  local preset = presets[index]
+  if preset == nil or applying_preset then return end
+  applying_preset = true
+  for _, id in ipairs(preset_keys) do
+    params:set(id, preset[id])
+  end
+  applying_preset = false
+end
+
 local function flag(value)
   return value == 2 and 1 or 0
 end
@@ -151,6 +262,12 @@ local function build_params()
 
   params:add_separator("midi")
   params:add_option("midi_mode", "midi", {"off", "pitch", "pitch + seed"}, 2)
+
+  local preset_names = {}
+  for i, preset in ipairs(presets) do preset_names[i] = preset.name end
+  params:add_separator("recipes")
+  params:add_option("beads_preset", "preset", preset_names, 1)
+  params:set_action("beads_preset", apply_preset)
 end
 
 local function on_midi(data)
@@ -256,6 +373,19 @@ local function draw_tone()
   end
 end
 
+local function draw_presets()
+  local window = 6
+  local start = 1
+  if selected > window then start = selected - window + 1 end
+  for i = start, math.min(#presets, start + window - 1) do
+    local y = 16 + (i - start + 1) * 8
+    local on = i == selected
+    screen.level(on and 15 or 5)
+    screen.move(2, y)
+    screen.text((on and "> " or "  ") .. presets[i].name)
+  end
+end
+
 function init()
   build_params()
   midi_dev = midi.connect(1)
@@ -291,8 +421,18 @@ end
 
 function enc(n, d)
   if n == 1 then
-    page = util.clamp(page + d, 1, 4)
-    selected = 1
+    page = util.clamp(page + d, 1, 5)
+    if page == 5 then
+      selected = params:get("beads_preset")
+    else
+      selected = 1
+    end
+  elseif page == 5 then
+    if n == 2 or n == 3 then
+      local index = util.clamp(params:get("beads_preset") + d, 1, #presets)
+      params:set("beads_preset", index)
+      selected = index
+    end
   elseif page == 4 then
     if n == 2 then
       selected = util.clamp(selected + d, 1, #tone_rows)
@@ -314,7 +454,10 @@ function redraw()
   screen.clear()
   screen.font_face(1)
   screen.font_size(8)
-  if page == 4 then
+  if page == 5 then
+    header("preset")
+    draw_presets()
+  elseif page == 4 then
     header("tone")
     draw_tone()
   else

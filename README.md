@@ -34,7 +34,7 @@ With no headers, `./build.sh` only builds the offline render test (`build/beads_
 
 | Control | Does |
 | --- | --- |
-| E1 | Page: grain, spread, mix, tone |
+| E1 | Page: grain, spread, mix, tone, preset |
 | E2 | Pick a control on the page |
 | E3 | Change it |
 | K2 | Freeze the buffer |
@@ -47,6 +47,8 @@ Spread is the attenurandomizer on each of those, except density. At noon nothing
 Mix is feedback, dry/wet, reverb, and output level. In wavetable mode, feedback picks the waveform bank.
 
 Tone is the quality (dirty tape, clean tape, the Clouds-style setting, 16-bit), stereo or mono, audio input or wavetable, the norns clock as a seed clock, and whether the right output is audio or a gate.
+
+Preset recalls settings described in the Beads manual. Feedback is the manual's test patch (dry/wet open, size at noon, density at 9 o'clock, shape at 2, time fully down, pitch up a semitone). Delay, slice, and comb are the delay section. Reverse is a backwards grain. Tap is one grain per seed press. Wavetable is the internal oscillator. Melody turns the pitch spread fully up so pitch CV tracks a keyboard.
 
 MIDI defaults to pitch. Notes transpose around middle C. `pitch + seed` also holds the seed button for as long as a note is down.
 
