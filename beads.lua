@@ -1,5 +1,11 @@
--- Beads for norns.
--- Granular texture processor. The sound is Emilie Gillet's Beads DSP.
+-- beads
+-- granular processor
+-- Emilie Gillet's DSP
+--
+-- E1 page
+-- E2 pick, E3 turn
+-- K2 freeze
+-- K3 seed (hold=run)
 
 engine.name = "Beads"
 
